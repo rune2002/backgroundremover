@@ -12,81 +12,25 @@ from .. import utilities
 
 def load_model(model_name: str = "u2net"):
     hasher = Hasher()
-
-    model = {
-        'u2netp': (u2net.U2NETP,
-                   'e4f636406ca4e2af789941e7f139ee2e',
-                   '1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy',
-                   'U2NET_PATH'),
-        'u2net': (u2net.U2NET,
-                  '09fb4e49b7f785c9f855baf94916840a',
-                  '1ao1ovG1Qtx4b7EoskHXmi2E9rp5CHLcZ',
-                  'U2NET_PATH'),
-        'u2net_human_seg': (u2net.U2NET,
-                            '347c3d51b01528e5c6c071e3cff1cb55',
-                            '1-Yg0cxgrNhHP-016FPdp902BR-kSsA4P',
-                            'U2NET_PATH')
-    }[model_name]
-
     if model_name == "u2netp":
         net = u2net.U2NETP(3, 1)
-        path = os.environ.get(
-            "U2NETP_PATH",
-            os.path.expanduser(os.path.join("~", ".u2net", model_name + ".pth")),
-        )
-        if (
-            not os.path.exists(path)
-            or hasher.md5(path) != "e4f636406ca4e2af789941e7f139ee2e"
-        ):
-            utilities.download_files_from_github(
-                path, model_name
-            )
-
+        path = './models/u2netp.pth'
     elif model_name == "u2net":
         net = u2net.U2NET(3, 1)
-        path = os.environ.get(
-            "U2NET_PATH",
-            os.path.expanduser(os.path.join("~", ".u2net", model_name + ".pth")),
-        )
-        if (
-            not os.path.exists(path)
-            or hasher.md5(path) != "09fb4e49b7f785c9f855baf94916840a"
-        ):
-            utilities.download_files_from_github(
-                path, model_name
-            )
-
+        path = './models/u2net.pth'
     elif model_name == "u2net_human_seg":
         net = u2net.U2NET(3, 1)
-        path = os.environ.get(
-            "U2NET_PATH",
-            os.path.expanduser(os.path.join("~", ".u2net", model_name + ".pth")),
-        )
-        if (
-            not os.path.exists(path)
-            or hasher.md5(path) != "347c3d51b01528e5c6c071e3cff1cb55"
-        ):
-            utilities.download_files_from_github(
-                path, model_name
-            )
+        path = './models/u2net_human_seg.pth'
 
+    if torch.cuda.is_available():
+        net.load_state_dict(torch.load(path))
+        net.to(torch.device("cuda"))
     else:
-        print("Choose between u2net, u2net_human_seg or u2netp", file=sys.stderr)
-
-    try:
-        if torch.cuda.is_available():
-            net.load_state_dict(torch.load(path))
-            net.to(torch.device("cuda"))
-        else:
-            net.load_state_dict(
-                torch.load(
-                    path,
-                    map_location="cpu",
-                )
+        net.load_state_dict(
+            torch.load(
+                path,
+                map_location="cpu",
             )
-    except FileNotFoundError:
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), model_name + ".pth"
         )
 
     net.eval()
