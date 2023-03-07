@@ -198,6 +198,37 @@ def remove(
     return bio.getbuffer()
 
 
+def remove_(
+    image,
+    model_name="u2net",
+    alpha_matting=False,
+    alpha_matting_foreground_threshold=240,
+    alpha_matting_background_threshold=10,
+    alpha_matting_erode_structure_size=10,
+    alpha_matting_base_size=1000,
+):
+    model = get_model(model_name)
+    img = Image.open(image).convert("RGB")
+    mask = detect.predict(model, np.array(img)).convert("L")
+
+    if alpha_matting:
+        cutout = alpha_matting_cutout(
+            img,
+            mask,
+            alpha_matting_foreground_threshold,
+            alpha_matting_background_threshold,
+            alpha_matting_erode_structure_size,
+            alpha_matting_base_size,
+        )
+    else:
+        cutout = naive_cutout(img, mask)
+
+    bio = io.BytesIO()
+    cutout.save(bio, "PNG")
+
+    return cutout
+
+
 def iter_frames(path):
     return mpy.VideoFileClip(path).resize(height=320).iter_frames(dtype="uint8")
 

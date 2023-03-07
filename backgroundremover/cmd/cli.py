@@ -1,8 +1,10 @@
 import argparse
 import os
+from PIL import Image
+
 from distutils.util import strtobool
 from .. import utilities
-from ..bg import remove
+from ..bg import remove, remove_
 
 
 def main():
@@ -183,8 +185,24 @@ def main():
         help="Path to the output",
     )
 
+    ap.add_argument(
+        "--input_dir",
+        nargs="?",
+        default="-",
+        type=str,
+        help="Path to input images folder.",
+    )
+
+    ap.add_argument(
+        "--output_dir",
+        nargs="?",
+        default="-",
+        type=str,
+        help="Path to output images folder.",
+    )
+
     args = ap.parse_args()
-    if args.input.name.rsplit('.', 1)[1] in ['mp4', 'mov', 'webm', 'ogg', 'gif']:
+    if args.input.name.rsplit('.', 1)[-1] in ['mp4', 'mov', 'webm', 'ogg', 'gif']:
         if args.mattekey:
             utilities.matte_key(os.path.abspath(args.output.name), os.path.abspath(args.input.name),
                                 worker_nodes=args.workernodes,
@@ -230,7 +248,7 @@ def main():
                                                    frame_limit=args.framelimit,
                                                    framerate=args.framerate)
 
-    else:
+    elif args.input.name.rsplit('.', 1)[-1] in ['jpg', 'png', 'jpeg', 'bmp']:
         print(args.output.name)
         r = lambda i: i.buffer.read() if hasattr(i, "buffer") else i.read()
         w = lambda o, data: o.buffer.write(data) if hasattr(o, "buffer") else o.write(data)
@@ -246,6 +264,25 @@ def main():
                 alpha_matting_base_size=args.alpha_matting_base_size,
             ),
         )
+
+    elif os.path.isdir(args.input_dir):
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
+        
+        w = lambda o, img : img.save(o)
+        for image in os.listdir(args.input_dir):
+            w(
+                os.path.join(args.output_dir, image),
+                remove_(
+                    os.path.join(args.input_dir, image),
+                    model_name=args.model,
+                    alpha_matting=args.alpha_matting,
+                    alpha_matting_foreground_threshold=args.alpha_matting_foreground_threshold,
+                    alpha_matting_background_threshold=args.alpha_matting_background_threshold,
+                    alpha_matting_erode_structure_size=args.alpha_matting_erode_size,
+                    alpha_matting_base_size=args.alpha_matting_base_size,
+                )
+            )
 
 
 if __name__ == "__main__":
